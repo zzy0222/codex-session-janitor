@@ -9,6 +9,23 @@ The design borrows the useful parts of Claude Code cleaner tools: scan first,
 adjust retention, preview before cleaning, dry-run by default, and never touch
 configuration or authentication files.
 
+## Design References
+
+This project was motivated by Claude Code's documented session cleanup setting
+and by existing Claude cleanup tools:
+
+- Claude Code `cleanupPeriodDays`: Anthropic documents a startup cleanup policy
+  that deletes session files older than the configured number of days.
+  <https://docs.anthropic.com/en/docs/claude-code/settings>
+- Claude Code sessions: Claude Code documents resumable sessions backed by
+  saved transcript state. <https://code.claude.com/docs/en/sessions>
+- `claude-code-cleaner`: inspired the guided TUI shape, scan/select/preview/clean
+  flow, expiry threshold, dry-run mode, protected paths, and per-category
+  reporting. <https://github.com/GarrickZ2/claude-code-cleaner>
+- `CC-Cleaner`: informed the idea of making local assistant session state
+  browseable and cleanable with explicit preview/confirmation UX.
+  <https://github.com/tk-425/CC-Cleaner>
+
 ## What It Cleans
 
 By default, Codex stores local session transcripts under:
