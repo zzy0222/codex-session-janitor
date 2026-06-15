@@ -73,6 +73,53 @@ describe('session scanning and planning', () => {
     expect(session.summary).toContain('preview files before deleting');
   });
 
+  it('skips internal context when choosing a display title', async () => {
+    await writeJsonlSession('sessions/context-noise.jsonl', 10, [
+      {
+        type: 'session_meta',
+        payload: {
+          id: 'session-with-context-noise',
+          timestamp: '2026-06-01T00:00:00.000Z',
+          cwd: 'C:\\repo\\demo'
+        }
+      },
+      {
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          role: 'user',
+          content: [{type: 'input_text', text: '<environment_context>\n  <cwd>C:\\repo\\demo</cwd>\n</environment_context>'}]
+        }
+      },
+      {
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          role: 'user',
+          content: [{type: 'input_text', text: '# AGENTS.md instructions for C:\\repo\\demo\n<INSTRUCTIONS>...</INSTRUCTIONS>'}]
+        }
+      },
+      {
+        type: 'turn_context',
+        payload: {
+          summary: 'auto'
+        }
+      },
+      {
+        type: 'event_msg',
+        payload: {
+          type: 'user_message',
+          message: 'Add readable session cards to the TUI.'
+        }
+      }
+    ]);
+
+    const [session] = await scanSessions({codexHome: tmpRoot, now: NOW});
+
+    expect(session.title).toBe('Add readable session cards to the TUI.');
+    expect(session.summary).toBe('Add readable session cards to the TUI.');
+  });
+
   it('marks only files older than the retention cutoff', async () => {
     const oldFile = await writeSession('sessions/old.jsonl', 31, 'old');
     await writeSession('sessions/exact-cutoff.jsonl', 30, 'exact');

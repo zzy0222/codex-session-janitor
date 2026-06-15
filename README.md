@@ -54,7 +54,8 @@ codex-session-janitor scan --retention-days 30
 
 Preview cleanup. This is a dry run unless `--confirm` is passed. In dry-run
 mode, the tool computes and prints what would be removed but does not remove,
-trash, or modify any files:
+trash, or modify any files. Use it to verify the retention threshold, archived
+toggle, path safety, and reclaimable size before running a real cleanup:
 
 ```bash
 codex-session-janitor clean --retention-days 30
@@ -96,6 +97,10 @@ Scan and Preview display the saved session title/summary when available. If a
 transcript does not have a dedicated title or summary field, the tool falls
 back to the first user message, then to the session id. File path, cwd, age, and
 size remain visible for final confirmation.
+
+In dry-run mode, pressing Enter from Preview only simulates the cleanup. It
+shows the result that a real run would produce without removing, trashing, or
+modifying files.
 
 Keys:
 

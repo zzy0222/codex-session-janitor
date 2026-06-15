@@ -89,7 +89,7 @@ export function App({codexHome}: Props) {
         <Text color={screen === 'preview' ? 'cyan' : undefined}>3 Preview</Text>{'  '}
         <Text color={screen === 'clean' ? 'cyan' : undefined}>4 Clean</Text>
       </Text>
-      <Text color="gray">q quit | r rescan | Enter runs clean from Preview</Text>
+      <Text color="gray">q quit | r rescan | Enter runs Preview action</Text>
       <Text>{status}</Text>
       <Box marginTop={1} flexDirection="column">
         {screen === 'scan' && <ScanView sessions={sessions} plan={plan} />}
@@ -118,14 +118,7 @@ function ScanView({sessions, plan}: {sessions: SessionEntry[]; plan: CleanPlan})
       <Text>Total: {sessions.length} file(s), active {active}, archived {archived}</Text>
       <Text>Expired under current settings: {plan.candidates.length}, {formatBytes(plan.totalBytes)}</Text>
       <Text bold>Recent files</Text>
-      {latest.map((entry) => (
-        <Box key={entry.path} flexDirection="column">
-          <Text>
-            {entry.area.padEnd(8)} {formatAge(entry.ageDays).padStart(4)} {formatBytes(entry.sizeBytes).padStart(9)} {displayTitle(entry)}
-          </Text>
-          <Text color="gray">  {displayContext(entry)}</Text>
-        </Box>
-      ))}
+      {latest.map((entry) => <SessionCard key={entry.path} entry={entry} />)}
     </Box>
   );
 }
@@ -146,7 +139,7 @@ function SelectView({
       <Text bold>Settings</Text>
       <Text>Retention days: {retentionDays}  (Left/Right)</Text>
       <Text>Include archived: {includeArchived ? 'yes' : 'no'}  (a toggles)</Text>
-      <Text>Dry run: {dryRun ? 'yes' : 'no'}  (d toggles)</Text>
+      <Text>Dry run: {dryRun ? 'yes, simulate only' : 'no, move matched files to trash'}  (d toggles)</Text>
       <Text>Matched now: {plan.candidates.length} file(s), {formatBytes(plan.totalBytes)}</Text>
     </Box>
   );
@@ -156,20 +149,12 @@ function PreviewView({plan, dryRun}: {plan: CleanPlan; dryRun: boolean}) {
   return (
     <Box flexDirection="column">
       <Text bold>Preview</Text>
-      <Text>Mode: {dryRun ? 'dry run' : 'move to trash'}</Text>
+      <Text>Mode: {dryRun ? 'dry run, no files will be changed' : 'move matched files to trash'}</Text>
       <Text>Cutoff: files modified before {plan.cutoff.toISOString()}</Text>
       <Text>Will match {plan.candidates.length} file(s), {formatBytes(plan.totalBytes)}</Text>
-      {plan.candidates.slice(0, 10).map((entry) => (
-        <Box key={entry.path} flexDirection="column">
-          <Text>
-            {entry.area.padEnd(8)} {formatAge(entry.ageDays).padStart(4)} {formatBytes(entry.sizeBytes).padStart(9)} {displayTitle(entry)}
-          </Text>
-          {entry.summary && <Text color="gray">  {entry.summary}</Text>}
-          <Text color="gray">  {displayContext(entry)}</Text>
-        </Box>
-      ))}
+      {plan.candidates.slice(0, 10).map((entry) => <SessionCard key={entry.path} entry={entry} showSummary />)}
       {plan.candidates.length > 10 && <Text color="gray">...and {plan.candidates.length - 10} more</Text>}
-      <Text color="yellow">Press Enter to run.</Text>
+      <Text color="yellow">Press Enter to {dryRun ? 'simulate cleanup' : 'move these files to trash'}.</Text>
     </Box>
   );
 }
@@ -189,12 +174,48 @@ function CleanView({result}: {result: CleanResult | null}) {
   );
 }
 
+function SessionCard({entry, showSummary = false}: {entry: SessionEntry; showSummary?: boolean}) {
+  const summary = displaySummary(entry);
+
+  return (
+    <Box flexDirection="column" marginBottom={1}>
+      <Text>
+        <Text color={entry.area === 'active' ? 'green' : 'magenta'}>{entry.area.toUpperCase()}</Text>
+        <Text color="gray">  age </Text>{formatAge(entry.ageDays)}
+        <Text color="gray">  size </Text>{formatBytes(entry.sizeBytes)}
+      </Text>
+      <Text>
+        <Text color="cyan">Title   </Text>{displayTitle(entry)}
+      </Text>
+      {showSummary && summary && (
+        <Text>
+          <Text color="cyan">Summary </Text>{summary}
+        </Text>
+      )}
+      <Text color="gray">
+        <Text>CWD     </Text>{shortenMiddle(entry.cwd ?? 'unknown', 96)}
+      </Text>
+      <Text color="gray">
+        <Text>Started </Text>{entry.startedAt ? entry.startedAt.toISOString() : 'unknown'}
+      </Text>
+      <Text color="gray">
+        <Text>File    </Text>{shortenMiddle(entry.path, 110)}
+      </Text>
+    </Box>
+  );
+}
+
 function displayTitle(entry: SessionEntry): string {
   return entry.title ?? entry.id;
 }
 
-function displayContext(entry: SessionEntry): string {
-  const cwd = entry.cwd ? `cwd: ${entry.cwd}` : undefined;
-  const startedAt = entry.startedAt ? `started: ${entry.startedAt.toISOString()}` : undefined;
-  return [cwd, startedAt, `file: ${entry.path}`].filter(Boolean).join(' | ');
+function displaySummary(entry: SessionEntry): string | undefined {
+  if (!entry.summary || entry.summary === entry.title) return undefined;
+  return entry.summary;
+}
+
+function shortenMiddle(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  const keep = Math.max(8, Math.floor((maxLength - 3) / 2));
+  return `${value.slice(0, keep)}...${value.slice(-keep)}`;
 }

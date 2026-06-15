@@ -9,12 +9,21 @@ export interface SessionMetadata {
   startedAt?: Date;
 }
 
+interface MetadataState extends SessionMetadata {
+  textRank?: number;
+}
+
+interface TextCandidate {
+  text: string;
+  rank: number;
+}
+
 const MAX_LINES = 200;
 const TITLE_LENGTH = 80;
 const SUMMARY_LENGTH = 220;
 
 export async function readSessionMetadata(filePath: string): Promise<SessionMetadata> {
-  const metadata: SessionMetadata = {};
+  const metadata: MetadataState = {};
   const rl = createInterface({
     input: createReadStream(filePath, {encoding: 'utf8'}),
     crlfDelay: Infinity
@@ -39,7 +48,7 @@ export async function readSessionMetadata(filePath: string): Promise<SessionMeta
   return metadata;
 }
 
-function inspectRecord(record: unknown, metadata: SessionMetadata): void {
+function inspectRecord(record: unknown, metadata: MetadataState): void {
   if (!isObject(record)) return;
 
   const type = stringValue(record.type);
@@ -49,32 +58,25 @@ function inspectRecord(record: unknown, metadata: SessionMetadata): void {
     metadata.id ??= stringValue(payload.id);
     metadata.cwd ??= stringValue(payload.cwd);
     metadata.startedAt ??= dateValue(payload.timestamp);
-    metadata.title ??= cleanText(stringValue(payload.title), TITLE_LENGTH);
-    metadata.summary ??= cleanText(stringValue(payload.summary), SUMMARY_LENGTH);
+    setTextMetadata(metadata, stringValue(payload.title), stringValue(payload.summary), 3);
     return;
-  }
-
-  if (payload) {
-    metadata.title ??= cleanText(stringValue(payload.title), TITLE_LENGTH);
-    metadata.summary ??= cleanText(stringValue(payload.summary), SUMMARY_LENGTH);
   }
 
   const userText = userMessageText(payload ?? record);
   if (userText) {
-    metadata.title ??= cleanText(firstLine(userText), TITLE_LENGTH);
-    metadata.summary ??= cleanText(userText, SUMMARY_LENGTH);
+    setTextMetadata(metadata, firstLine(userText.text), userText.text, userText.rank);
   }
 }
 
-function userMessageText(record: unknown): string | undefined {
+function userMessageText(record: unknown): TextCandidate | undefined {
   if (!isObject(record)) return undefined;
 
   if (record.type === 'user_message') {
-    return stringValue(record.message);
+    return candidate(stringValue(record.message), 2);
   }
 
   if (record.type === 'message' && record.role === 'user') {
-    return contentText(record.content);
+    return candidate(contentText(record.content), 1);
   }
 
   if (isObject(record.payload)) {
@@ -82,6 +84,35 @@ function userMessageText(record: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+function setTextMetadata(metadata: MetadataState, title: string | undefined, summary: string | undefined, rank: number): void {
+  if (rank < (metadata.textRank ?? 0)) return;
+
+  const cleanedTitle = cleanText(title, TITLE_LENGTH);
+  const cleanedSummary = cleanText(summary, SUMMARY_LENGTH);
+  if (!cleanedTitle && !cleanedSummary) return;
+
+  metadata.title = cleanedTitle ?? metadata.title;
+  metadata.summary = cleanedSummary ?? cleanedTitle ?? metadata.summary;
+  if (cleanedTitle) {
+    metadata.textRank = rank;
+  }
+}
+
+function candidate(text: string | undefined, rank: number): TextCandidate | undefined {
+  if (!text || isInternalContextText(text)) return undefined;
+  return {text, rank};
+}
+
+function isInternalContextText(value: string): boolean {
+  const trimmed = value.trim();
+  return (
+    trimmed.startsWith('<environment_context>') ||
+    trimmed.startsWith('# AGENTS.md instructions') ||
+    trimmed.includes('<INSTRUCTIONS>') ||
+    trimmed.startsWith('<app-context>')
+  );
 }
 
 function contentText(content: unknown): string | undefined {
