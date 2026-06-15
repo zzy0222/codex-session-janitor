@@ -37,6 +37,42 @@ describe('session scanning and planning', () => {
     expect(sessions.find((entry) => entry.path === archived)?.area).toBe('archived');
   });
 
+  it('extracts readable metadata from Codex JSONL transcripts', async () => {
+    await writeJsonlSession('sessions/metadata.jsonl', 10, [
+      {
+        timestamp: '2026-06-01T00:00:00.000Z',
+        type: 'session_meta',
+        payload: {
+          id: 'session-with-metadata',
+          timestamp: '2026-06-01T00:00:00.000Z',
+          cwd: 'C:\\repo\\demo'
+        }
+      },
+      {
+        timestamp: '2026-06-01T00:00:01.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: 'Build a cleanup tool\nThe tool should preview files before deleting them.'
+            }
+          ]
+        }
+      }
+    ]);
+
+    const [session] = await scanSessions({codexHome: tmpRoot, now: NOW});
+
+    expect(session.id).toBe('session-with-metadata');
+    expect(session.cwd).toBe('C:\\repo\\demo');
+    expect(session.startedAt?.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+    expect(session.title).toBe('Build a cleanup tool');
+    expect(session.summary).toContain('preview files before deleting');
+  });
+
   it('marks only files older than the retention cutoff', async () => {
     const oldFile = await writeSession('sessions/old.jsonl', 31, 'old');
     await writeSession('sessions/exact-cutoff.jsonl', 30, 'exact');
@@ -161,4 +197,8 @@ async function writeSession(relativePath: string, ageDays: number, content: stri
   const modified = new Date(NOW.getTime() - ageDays * MS_PER_DAY);
   await fs.utimes(filePath, modified, modified);
   return filePath;
+}
+
+async function writeJsonlSession(relativePath: string, ageDays: number, records: unknown[]): Promise<string> {
+  return writeSession(relativePath, ageDays, records.map((record) => JSON.stringify(record)).join('\n'));
 }

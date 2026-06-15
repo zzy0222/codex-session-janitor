@@ -1,5 +1,6 @@
 export * from './clean.js';
 export * from './format.js';
+export * from './metadata.js';
 export * from './paths.js';
 export * from './plan.js';
 export * from './scan.js';

@@ -6,25 +6,9 @@ small core module that could be embedded into Codex later, plus a CLI and a
 guided terminal UI for manual management.
 
 The design borrows the useful parts of Claude Code cleaner tools: scan first,
-adjust retention, preview before cleaning, dry-run by default, and never touch
-configuration or authentication files.
-
-## Design References
-
-This project was motivated by Claude Code's documented session cleanup setting
-and by existing Claude cleanup tools:
-
-- Claude Code `cleanupPeriodDays`: Anthropic documents a startup cleanup policy
-  that deletes session files older than the configured number of days.
-  <https://docs.anthropic.com/en/docs/claude-code/settings>
-- Claude Code sessions: Claude Code documents resumable sessions backed by
-  saved transcript state. <https://code.claude.com/docs/en/sessions>
-- `claude-code-cleaner`: inspired the guided TUI shape, scan/select/preview/clean
-  flow, expiry threshold, dry-run mode, protected paths, and per-category
-  reporting. <https://github.com/GarrickZ2/claude-code-cleaner>
-- `CC-Cleaner`: informed the idea of making local assistant session state
-  browseable and cleanable with explicit preview/confirmation UX.
-  <https://github.com/tk-425/CC-Cleaner>
+adjust retention, preview before cleaning, dry-run by default, show readable
+session labels where possible, and never touch configuration or authentication
+files.
 
 ## What It Cleans
 
@@ -68,7 +52,9 @@ Scan current sessions:
 codex-session-janitor scan --retention-days 30
 ```
 
-Preview cleanup. This is a dry run unless `--confirm` is passed:
+Preview cleanup. This is a dry run unless `--confirm` is passed. In dry-run
+mode, the tool computes and prints what would be removed but does not remove,
+trash, or modify any files:
 
 ```bash
 codex-session-janitor clean --retention-days 30
@@ -105,6 +91,11 @@ Screens:
 - `2 Select`: retention days, archived inclusion, dry-run toggle
 - `3 Preview`: exact plan before cleaning
 - `4 Clean`: result screen
+
+Scan and Preview display the saved session title/summary when available. If a
+transcript does not have a dedicated title or summary field, the tool falls
+back to the first user message, then to the session id. File path, cwd, age, and
+size remain visible for final confirmation.
 
 Keys:
 
@@ -159,6 +150,23 @@ Covered behavior:
 - Real deletion inside a temporary Codex home
 - Refusing to delete paths outside session roots
 - Startup cleanup interval marker
+
+## Design References
+
+This project was motivated by Claude Code's documented session cleanup setting
+and by existing Claude cleanup tools:
+
+- Claude Code `cleanupPeriodDays`: Anthropic documents a startup cleanup policy
+  that deletes session files older than the configured number of days.
+  <https://docs.anthropic.com/en/docs/claude-code/settings>
+- Claude Code sessions: Claude Code documents resumable sessions backed by
+  saved transcript state. <https://code.claude.com/docs/en/sessions>
+- `claude-code-cleaner`: inspired the guided TUI shape, scan/select/preview/clean
+  flow, expiry threshold, dry-run mode, protected paths, and per-category
+  reporting. <https://github.com/GarrickZ2/claude-code-cleaner>
+- `CC-Cleaner`: informed the idea of making local assistant session state
+  browseable and cleanable with explicit preview/confirmation UX.
+  <https://github.com/tk-425/CC-Cleaner>
 
 ## License
 

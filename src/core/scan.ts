@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {readSessionMetadata} from './metadata.js';
 import {sessionRoots} from './paths.js';
 import type {ScanOptions, SessionEntry} from './types.js';
 
@@ -14,10 +15,15 @@ export async function scanSessions(options: ScanOptions): Promise<SessionEntry[]
 
     for await (const file of walkFiles(root)) {
       const stat = await fs.stat(file);
+      const metadata = await readSessionMetadata(file);
       entries.push({
-        id: sessionIdFromPath(file),
+        id: metadata.id ?? sessionIdFromPath(file),
         area,
         path: file,
+        title: metadata.title,
+        summary: metadata.summary,
+        cwd: metadata.cwd,
+        startedAt: metadata.startedAt,
         sizeBytes: stat.size,
         modifiedAt: stat.mtime,
         ageDays: Math.max(0, (now.getTime() - stat.mtime.getTime()) / MS_PER_DAY)

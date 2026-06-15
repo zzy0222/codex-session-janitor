@@ -6,6 +6,10 @@ export interface SessionEntry {
   id: string;
   area: SessionArea;
   path: string;
+  title?: string;
+  summary?: string;
+  cwd?: string;
+  startedAt?: Date;
   sizeBytes: number;
   modifiedAt: Date;
   ageDays: number;

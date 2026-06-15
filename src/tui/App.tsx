@@ -119,9 +119,12 @@ function ScanView({sessions, plan}: {sessions: SessionEntry[]; plan: CleanPlan})
       <Text>Expired under current settings: {plan.candidates.length}, {formatBytes(plan.totalBytes)}</Text>
       <Text bold>Recent files</Text>
       {latest.map((entry) => (
-        <Text key={entry.path}>
-          {entry.area.padEnd(8)} {formatAge(entry.ageDays).padStart(4)} {formatBytes(entry.sizeBytes).padStart(9)} {entry.id}
-        </Text>
+        <Box key={entry.path} flexDirection="column">
+          <Text>
+            {entry.area.padEnd(8)} {formatAge(entry.ageDays).padStart(4)} {formatBytes(entry.sizeBytes).padStart(9)} {displayTitle(entry)}
+          </Text>
+          <Text color="gray">  {displayContext(entry)}</Text>
+        </Box>
       ))}
     </Box>
   );
@@ -157,9 +160,13 @@ function PreviewView({plan, dryRun}: {plan: CleanPlan; dryRun: boolean}) {
       <Text>Cutoff: files modified before {plan.cutoff.toISOString()}</Text>
       <Text>Will match {plan.candidates.length} file(s), {formatBytes(plan.totalBytes)}</Text>
       {plan.candidates.slice(0, 10).map((entry) => (
-        <Text key={entry.path}>
-          {entry.area.padEnd(8)} {formatAge(entry.ageDays).padStart(4)} {formatBytes(entry.sizeBytes).padStart(9)} {entry.path}
-        </Text>
+        <Box key={entry.path} flexDirection="column">
+          <Text>
+            {entry.area.padEnd(8)} {formatAge(entry.ageDays).padStart(4)} {formatBytes(entry.sizeBytes).padStart(9)} {displayTitle(entry)}
+          </Text>
+          {entry.summary && <Text color="gray">  {entry.summary}</Text>}
+          <Text color="gray">  {displayContext(entry)}</Text>
+        </Box>
       ))}
       {plan.candidates.length > 10 && <Text color="gray">...and {plan.candidates.length - 10} more</Text>}
       <Text color="yellow">Press Enter to run.</Text>
@@ -180,4 +187,14 @@ function CleanView({result}: {result: CleanResult | null}) {
       {result.failures.length > 0 && <Text color="red">Failures: {result.failures.length}</Text>}
     </Box>
   );
+}
+
+function displayTitle(entry: SessionEntry): string {
+  return entry.title ?? entry.id;
+}
+
+function displayContext(entry: SessionEntry): string {
+  const cwd = entry.cwd ? `cwd: ${entry.cwd}` : undefined;
+  const startedAt = entry.startedAt ? `started: ${entry.startedAt.toISOString()}` : undefined;
+  return [cwd, startedAt, `file: ${entry.path}`].filter(Boolean).join(' | ');
 }
