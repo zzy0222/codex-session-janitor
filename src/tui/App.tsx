@@ -23,6 +23,7 @@ export function App({codexHome}: Props) {
   const [dryRun, setDryRun] = useState(true);
   const [sessions, setSessions] = useState<SessionEntry[]>([]);
   const [result, setResult] = useState<CleanResult | null>(null);
+  const [refreshedAfterClean, setRefreshedAfterClean] = useState(false);
   const [status, setStatus] = useState('Scanning...');
 
   useEffect(() => {
@@ -64,9 +65,9 @@ export function App({codexHome}: Props) {
   async function refresh() {
     setStatus('Scanning...');
     setResult(null);
-    const scanned = await scanSessions({codexHome, includeArchived: true});
-    setSessions(scanned);
-    setStatus(`Scanned ${scanned.length} session file(s).`);
+    setRefreshedAfterClean(false);
+    const count = await refreshSessions();
+    setStatus(`Scanned ${count} session file(s).`);
   }
 
   async function clean(currentPlan: CleanPlan, currentDryRun: boolean) {
@@ -76,7 +77,16 @@ export function App({codexHome}: Props) {
       mode: 'trash'
     });
     setResult(cleanResult);
-    setStatus(currentDryRun ? 'Dry run complete.' : 'Clean complete.');
+    setStatus(currentDryRun ? 'Dry run complete. Refreshing scan...' : 'Clean complete. Refreshing scan...');
+    const count = await refreshSessions();
+    setRefreshedAfterClean(true);
+    setStatus(`${currentDryRun ? 'Dry run complete' : 'Clean complete'}; refreshed ${count} session file(s).`);
+  }
+
+  async function refreshSessions(): Promise<number> {
+    const scanned = await scanSessions({codexHome, includeArchived: true});
+    setSessions(scanned);
+    return scanned.length;
   }
 
   return (
@@ -102,7 +112,7 @@ export function App({codexHome}: Props) {
           />
         )}
         {screen === 'preview' && <PreviewView plan={plan} dryRun={dryRun} />}
-        {screen === 'clean' && <CleanView result={result} />}
+        {screen === 'clean' && <CleanView result={result} refreshedAfterClean={refreshedAfterClean} />}
       </Box>
     </Box>
   );
@@ -159,7 +169,7 @@ function PreviewView({plan, dryRun}: {plan: CleanPlan; dryRun: boolean}) {
   );
 }
 
-function CleanView({result}: {result: CleanResult | null}) {
+function CleanView({result, refreshedAfterClean}: {result: CleanResult | null; refreshedAfterClean: boolean}) {
   if (!result) return <Text>Waiting for clean run...</Text>;
 
   return (
@@ -169,6 +179,7 @@ function CleanView({result}: {result: CleanResult | null}) {
         {result.dryRun ? 'Would remove' : 'Removed'} {result.dryRun ? result.wouldRemove.length : result.removed.length}
         {' '}file(s), {formatBytes(result.freedBytes)}
       </Text>
+      {refreshedAfterClean && <Text color="green">Scan and Preview data refreshed.</Text>}
       {result.failures.length > 0 && <Text color="red">Failures: {result.failures.length}</Text>}
     </Box>
   );
