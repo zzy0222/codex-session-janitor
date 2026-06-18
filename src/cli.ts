@@ -117,8 +117,16 @@ program
   .command('tui', {isDefault: true})
   .description('Open the interactive terminal UI.')
   .option('--codex-home <path>', 'Codex home directory', defaultCodexHome())
-  .action((options) => {
-    render(React.createElement(App, {codexHome: options.codexHome}));
+  .action(async (options) => {
+    process.stdout.write('\u001b[?1049h\u001b[?25l\u001b[2J\u001b[H');
+    const instance = render(React.createElement(App, {codexHome: options.codexHome}), {
+      exitOnCtrlC: false
+    });
+    try {
+      await instance.waitUntilExit();
+    } finally {
+      process.stdout.write('\u001b[?25h\u001b[?1049l');
+    }
   });
 
 function parsePositiveInt(value: string): number {

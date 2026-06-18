@@ -4,6 +4,7 @@ import path from 'node:path';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {
   buildCleanPlan,
+  buildSelectedCleanPlan,
   executeCleanPlan,
   runStartupCleanup,
   scanSessions,
@@ -120,6 +121,57 @@ describe('session scanning and planning', () => {
     expect(session.summary).toBe('Add readable session cards to the TUI.');
   });
 
+  it('skips shell command records and uses the real prompt as the display title', async () => {
+    await writeJsonlSession('sessions/shell-noise.jsonl', 10, [
+      {
+        type: 'session_meta',
+        payload: {
+          id: 'session-with-shell-noise',
+          timestamp: '2026-06-01T00:00:00.000Z',
+          cwd: 'C:\\Users\\42202'
+        }
+      },
+      {
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: '<user_shell_command>\n<command>where.exe codex</command>\n</user_shell_command>'
+            }
+          ]
+        }
+      },
+      {
+        type: 'response_item',
+        payload: {
+          type: 'message',
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: '<image name=[Image #1] path="C:\\WINDOWS\\TEMP\\codex-clipboard.png">\n</image>\n[Image #1] 联网查询图片中的游戏在哪里可以玩到？'
+            }
+          ]
+        }
+      },
+      {
+        type: 'event_msg',
+        payload: {
+          type: 'user_message',
+          message: '[Image #1] 联网查询图片中的游戏在哪里可以玩到？'
+        }
+      }
+    ]);
+
+    const [session] = await scanSessions({codexHome: tmpRoot, now: NOW});
+
+    expect(session.title).toBe('[Image #1] 联网查询图片中的游戏在哪里可以玩到？');
+    expect(session.summary).toBe('[Image #1] 联网查询图片中的游戏在哪里可以玩到？');
+  });
+
   it('marks only files older than the retention cutoff', async () => {
     const oldFile = await writeSession('sessions/old.jsonl', 31, 'old');
     await writeSession('sessions/exact-cutoff.jsonl', 30, 'exact');
@@ -144,6 +196,19 @@ describe('session scanning and planning', () => {
     });
 
     expect(plan.candidates.map((entry) => entry.path)).toEqual([oldActive]);
+  });
+
+  it('builds a clean plan from manually selected sessions', async () => {
+    const oldFile = await writeSession('sessions/old.jsonl', 60, 'old');
+    const recentFile = await writeSession('sessions/recent.jsonl', 1, 'recent');
+    const sessions = await scanSessions({codexHome: tmpRoot, now: NOW});
+    const selected = sessions.filter((entry) => entry.path === recentFile || entry.path === oldFile);
+
+    const plan = buildSelectedCleanPlan(tmpRoot, selected);
+
+    expect(plan.retentionDays).toBe(0);
+    expect(plan.candidates.map((entry) => entry.path).sort()).toEqual([oldFile, recentFile].sort());
+    expect(plan.candidates.every((entry) => entry.reason === 'selected in session janitor')).toBe(true);
   });
 });
 

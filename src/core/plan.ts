@@ -1,4 +1,4 @@
-import type {CleanPlan, CleanupOptions, SessionEntry} from './types.js';
+import type {CleanPlan, CleanupCandidate, CleanupOptions, SessionEntry} from './types.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -27,6 +27,22 @@ export function buildCleanPlan(codexHome: string, sessions: SessionEntry[], opti
     cutoff,
     candidates,
     kept,
+    totalBytes: candidates.reduce((sum, entry) => sum + entry.sizeBytes, 0)
+  };
+}
+
+export function buildSelectedCleanPlan(codexHome: string, sessions: SessionEntry[]): CleanPlan {
+  const candidates: CleanupCandidate[] = sessions.map((entry) => ({
+    ...entry,
+    reason: 'selected in session janitor'
+  }));
+
+  return {
+    codexHome,
+    retentionDays: 0,
+    cutoff: new Date(0),
+    candidates,
+    kept: [],
     totalBytes: candidates.reduce((sum, entry) => sum + entry.sizeBytes, 0)
   };
 }

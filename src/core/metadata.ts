@@ -89,8 +89,8 @@ function userMessageText(record: unknown): TextCandidate | undefined {
 function setTextMetadata(metadata: MetadataState, title: string | undefined, summary: string | undefined, rank: number): void {
   if (rank < (metadata.textRank ?? 0)) return;
 
-  const cleanedTitle = cleanText(title, TITLE_LENGTH);
-  const cleanedSummary = cleanText(summary, SUMMARY_LENGTH);
+  const cleanedTitle = cleanText(stripInlineMetadata(title), TITLE_LENGTH);
+  const cleanedSummary = cleanText(stripInlineMetadata(summary), SUMMARY_LENGTH);
   if (!cleanedTitle && !cleanedSummary) return;
 
   metadata.title = cleanedTitle ?? metadata.title;
@@ -109,10 +109,19 @@ function isInternalContextText(value: string): boolean {
   const trimmed = value.trim();
   return (
     trimmed.startsWith('<environment_context>') ||
+    trimmed.startsWith('<user_shell_command>') ||
     trimmed.startsWith('# AGENTS.md instructions') ||
     trimmed.includes('<INSTRUCTIONS>') ||
     trimmed.startsWith('<app-context>')
   );
+}
+
+function stripInlineMetadata(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return value
+    .replace(/<image\b[^>]*>\s*<\/image>/gi, '')
+    .replace(/<image\b[^>]*\/>/gi, '')
+    .trim();
 }
 
 function contentText(content: unknown): string | undefined {
@@ -129,8 +138,8 @@ function contentText(content: unknown): string | undefined {
   return parts.length > 0 ? parts.join('\n') : undefined;
 }
 
-function hasEnoughMetadata(metadata: SessionMetadata): boolean {
-  return Boolean(metadata.cwd && metadata.startedAt && metadata.title && metadata.summary);
+function hasEnoughMetadata(metadata: MetadataState): boolean {
+  return Boolean(metadata.cwd && metadata.startedAt && metadata.title && metadata.summary && (metadata.textRank ?? 0) >= 2);
 }
 
 function safeJsonParse(line: string): unknown {
