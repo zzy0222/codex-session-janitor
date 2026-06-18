@@ -1,14 +1,15 @@
 # Codex Session Janitor
 
-Codex Session Janitor is a small TypeScript project that prototypes automatic
-retention cleanup for local Codex session transcripts. It is designed as a
-small core module that could be embedded into Codex later, plus a CLI and a
-guided terminal UI for manual management.
+Codex Session Janitor is a small TypeScript project for browsing and cleaning
+local Codex session transcripts. It provides a reusable core cleanup module, a
+scriptable CLI, and a full-screen terminal UI that mirrors the Codex-native
+session picker style.
 
-The design borrows the useful parts of Claude Code cleaner tools: scan first,
-adjust retention, preview before cleaning, dry-run by default, show readable
-session labels where possible, and never touch configuration or authentication
-files.
+The latest TUI is intended to be the external-tool counterpart to Codex's
+native `/janitor` command: it offers similar session browsing and manual delete
+behavior without requiring users to rebuild Codex itself. The regular CLI still
+keeps richer automation-oriented commands such as retention-based cleanup and
+startup cleanup.
 
 ## What It Cleans
 
@@ -86,30 +87,34 @@ codex-session-janitor startup-clean --retention-days 30 --confirm
 codex-session-janitor tui
 ```
 
-Screens:
+The TUI opens in an alternate full-screen terminal view and restores the
+previous terminal state when it exits. It scans active Codex sessions, defaults
+to the current working directory filter, and starts in dense view.
 
-- `1 Scan`: overview and recent files
-- `2 Select`: retention days, archived inclusion, dry-run toggle
-- `3 Preview`: exact plan before cleaning
-- `4 Clean`: result screen
+It is intentionally closer to Codex's built-in `/janitor` picker than to the
+retention CLI. Sessions are selected manually and deleted only after an explicit
+confirmation. There is no TUI dry-run toggle.
 
-Scan and Preview display the saved session title/summary when available. If a
-transcript does not have a dedicated title or summary field, the tool falls
-back to the first user message, then to the session id. File path, cwd, age, and
-size remain visible for final confirmation.
+Rows display readable session titles when possible. If a transcript does not
+have a dedicated title or summary field, the tool falls back to the first real
+user message, skipping internal context records and shell-command noise.
 
-In dry-run mode, pressing Enter from Preview only simulates the cleanup. It
-shows the result that a real run would produce without removing, trashing, or
-modifying files.
+The toolbar supports filtering and sorting:
+
+- `Filter: Cwd | All`
+- `Sort: Updated | Created`
 
 Keys:
 
-- `Left` / `Right`: adjust retention days on Select
-- `a`: include/exclude archived sessions
-- `d`: toggle dry-run
-- `Enter`: run from Preview
-- `r`: rescan
-- `q`: quit
+- `Space`: select or unselect a session for deletion
+- `Enter`: request deletion; press Enter again quickly to confirm
+- `Esc` / `Ctrl+C`: exit
+- `Tab`: switch focus between filter and sort
+- `Left` / `Right`: change the focused toolbar option
+- `Ctrl+E`: expand the selected session details and recent conversation preview
+- `Ctrl+O`: toggle dense and comfortable view
+- `Up` / `Down` or `k` / `j`: browse sessions
+- Type text: search sessions, including Chinese input
 
 ## Proposed Codex Integration Shape
 
@@ -142,6 +147,7 @@ interval_hours = 24
 ## Tests
 
 ```bash
+npm run lint
 npm test
 npm run build
 ```
@@ -149,8 +155,11 @@ npm run build
 Covered behavior:
 
 - Scanning active and archived session roots
+- Readable metadata extraction from Codex JSONL transcripts
+- Skipping internal context and shell-command records when choosing titles
 - Retention cutoff behavior
 - Excluding archived sessions
+- Building a cleanup plan from manually selected TUI sessions
 - Dry-run behavior
 - Real deletion inside a temporary Codex home
 - Refusing to delete paths outside session roots
@@ -159,8 +168,12 @@ Covered behavior:
 ## Design References
 
 This project was motivated by Claude Code's documented session cleanup setting
-and by existing Claude cleanup tools:
+and by existing Claude cleanup tools. The current TUI also borrows interaction
+details from Codex's own session picker:
 
+- Codex `/resume`: inspired the full-screen TUI picker, dense/comfortable views,
+  selected-row treatment, filter/sort toolbar, and `Ctrl+E` expanded session
+  preview behavior.
 - Claude Code `cleanupPeriodDays`: Anthropic documents a startup cleanup policy
   that deletes session files older than the configured number of days.
   <https://docs.anthropic.com/en/docs/claude-code/settings>
