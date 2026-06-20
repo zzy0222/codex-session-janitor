@@ -186,6 +186,19 @@ details from Codex's own session picker:
   browseable and cleanable with explicit preview/confirmation UX.
   <https://github.com/tk-425/CC-Cleaner>
 
+## Support
+
+If this project helps you, you can support its development through:
+
+- GitHub Sponsors: <https://github.com/sponsors/zzy0222>
+- PayPal.Me: <https://paypal.me/zzy0222>
+
+Mainland China payment methods:
+
+| Alipay | WeChat Pay |
+| --- | --- |
+| <img src="donation-qrcodes/alipay_qrcode.jpg" width="220" alt="Alipay QR code"> | <img src="donation-qrcodes/wx_qrcode.jpg" width="220" alt="WeChat Pay QR code"> |
+
 ## License
 
 MIT
