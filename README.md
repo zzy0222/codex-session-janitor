@@ -186,6 +186,12 @@ details from Codex's own session picker:
   browseable and cleanable with explicit preview/confirmation UX.
   <https://github.com/tk-425/CC-Cleaner>
 
+## Related Projects
+
+- [`claude-session-janitor`](https://github.com/zzy0222/claude-session-janitor):
+  the sibling project for Claude Code sessions. It is a Claude Code port of this
+  project and keeps the same CLI commands and TUI controls.
+
 ## Support
 
 If this project helps you, you can support its development through:
